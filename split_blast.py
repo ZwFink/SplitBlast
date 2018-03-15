@@ -41,3 +41,38 @@ class BlastInfo:
                                 options.numHsps, opts.goodHit, this_out )
                                 
                           )
+
+def main():
+
+    # Create option parser and usage to parse the command line
+    usage = "usage: %prog [options]"
+    option_parser = optparse.OptionParser( usage )
+
+    # Input/Output file options
+    option_parser.add_option( '-q', '--query', help = ( "Fasta query file. Can be a "
+                                                        "comma specified list of fastas "
+                                                        "also. [None, Required]"
+                                                      )
+                            )
+    option_parser.add_option( '--ns', '--nucSubject', help = ( "Fasta file of "
+                                                               "nucleotide sequences to "
+                                                               " compare the query sequences "
+                                                               "to. Will format if necessary. "
+                                                               "[None]"
+                                                              )
+                             )
+    option_parser.add_option( '--ps', '--protSubject', help = ( "Fasta file of "
+                                                                "protein sequences to compare "
+                                                                "the query sequences to. "
+                                                                "Will format if necessary. "
+                                                                "[None]"
+                                                               )
+                            )
+    option_parser.add_option( '--wc', '--withColor', default = False, action = \
+                               "store_true", help = ( "Use this flag if you want "
+                                                      "the colored version of the "
+                                                      "parsed output to be produced."
+                                                    )
+                             )
+                        
+    
