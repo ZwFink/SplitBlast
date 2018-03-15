@@ -68,11 +68,53 @@ def main():
                                                                 "[None]"
                                                                )
                             )
-    option_parser.add_option( '--wc', '--withColor', default = False, action = \
-                               "store_true", help = ( "Use this flag if you want "
-                                                      "the colored version of the "
-                                                      "parsed output to be produced."
-                                                    )
+    option_parser.add_option( '--wc', '--withColor', default = False, \
+                              action = "store_true", help = ( "Use this flag if you want "
+                                                              "the colored version of the "
+                                                              "parsed output to be produced."
+                                                            )
                              )
                         
+    # General
+    option_parser.add_option( '-n', '--numProcs', type = 'int', default = 4, \
+                              help = "Number of separate blasts to start [4]"
+                            )
+    option_parser.add_option( '-t', '--temp', default = './temp', help = ( "Name for the "
+                                                                           "temporary working "
+                                                                           "directory. Will be created "
+                                                                           " at the beginning of the "
+                                                                           "script and deleted at the "
+                                                                           "beginning of the script "
+                                                                           "and then removed at the end."
+                                                                           "[/.temp]"
+                                                                          )
+                             )
+    option_parser.add_option( '-b', '--blastType', help = ( "Type of blast to run. Options "
+                                                            "blastn, blastx, blastp, tblastx, "
+                                                            "tblastn. [blastn or blastx or "
+                                                            "blastn, blastx]"
+                                                           )
+                             )
+    option_parser.add_option( '--dontIndex', default = False, action = 'store_true', \
+                              help = ( "Use this flag if you don't want the sciprt to "
+                                       "try and index the database. This is necessary for "
+                                       "complex databases like nt and nr"
+                                     )
+                            )
+    option_parser.add_option( '--keepOut', default = False, action = 'store_true', \
+                              help = ( "Use this flag if you don't want "
+                                       "to delete the non-parsed blast files "
+                                       "automatically if format not XML]"
+                                     )
+                            )
+    option_parser.add_option( '--blastFull', default = False, action = 'store_true', \
+                              help = ( "Blast full query for each task "
+                                       "[automatically used if out format not XML]"
+                                     )
+                            )
+                                       
+
+                                  
+                              
+
     
