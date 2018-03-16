@@ -76,6 +76,16 @@ def main():
     if not options.blastType:
         set_default_blast( options, options.ns, options.ps )
 
+    
+    # Step through each type of blast
+    for blast_type in options.blastType.split( ',' ):
+        if blast_type == 'blastn':
+            for blastn_task in options.task.split( ',' ):
+                split_blast( blast_type, blastn_task, options )
+        else:
+            # TODO look to see if python has optional arguments
+            split_blast( blast_type, '', opts )
+
 def set_default_blast( options, nucleotide_sequences, protein_sequences ):
     ''' Sets default blast type, based on which combination of 
         sequences are present in the options object
@@ -98,7 +108,12 @@ def set_path_to_absolute( relative_path ):
        relative_path = os.path.abspath( relative_path ) 
 
 def multiple_queries( query_list ):
-    return len( query_list.split( ',' ) ) > 1 
+    '''
+        Checks to see if multiple queries were supplied to 
+        the script on startup. 
+        Returns boolean result of test
+    '''
+    return ( len( query_list.split( ',' ) ) > 1 )
 
 def add_options( parser_object , default_values ):
     ''' Method to add options to the command-line parser
