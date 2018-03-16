@@ -64,10 +64,31 @@ def main():
     if multiple_queries( options.query ):
         options.query = combine_queries( options.query )
 
+    # Change filenames to their absolute path versions      
     set_path_to_absolute( options.query )
     set_path_to_absolute( options.ns )
     set_path_to_absolute( options.ps )
 
+    # Save current working directory
+    options.startDir = os.getcwd()
+
+    # Set default blast type if none provided
+    if not options.blastType:
+        set_default_blast( options, options.ns, options.ps )
+
+def set_default_blast( options, nucleotide_sequences, protein_sequences ):
+    ''' Sets default blast type, based on which combination of 
+        sequences are present in the options object
+    '''
+    if nucleotide_sequences and protein_sequences:
+        options.blastType = 'blastn,blastx'
+    elif nucleotide_sequences:
+        options.blastType = 'blastn'
+    elif protein_sequences:
+        options.blastType = 'blastx'
+    else:
+        print( "Error, one subject fast must be provided!" )
+        
 
 def set_path_to_absolute( relative_path ):
     ''' Sets the paths for for objects to the absolute path
