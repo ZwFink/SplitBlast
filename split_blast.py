@@ -48,11 +48,25 @@ def main():
     usage = "usage: %prog [options]"
     option_parser = optparse.OptionParser( usage )
 
-    add_options( option_parser )
+    option_defaults = { 'numProcs': 4, 'evalue': '10', 'outFmt': 5, \
+                      'numHits': 5, 'numHsps': 1, 'goodHit': '0.05', \
+                      'orfSize': 100 
+                    }
+
+    add_options( option_parser, option_defaults )
     options, arguments = option_parser.parse_args() 
 
-def add_options( parser_object ):
-    option_values = { 'numProcs': 4 }
+    # Adjust defaults if output type is not xml
+    if options.outFmt != 5:
+        options.keepOut = True
+        options.dontParse = True
+
+
+def add_options( parser_object , default_values ):
+    ''' Method to add options to the command-line parser
+        Defaults stored in default_values dictionary
+    '''
+
     # Input/Output file options
     parser_object.add_option( '-q', '--query', help = ( "Fasta query file. Can be a "
                                                         "comma specified list of fastas "
@@ -84,8 +98,9 @@ def add_options( parser_object ):
                              )
                         
     # General
-    parser_object.add_option( '-n', '--numProcs', type = 'int', default = option_values['numProcs'], \
-                              help = "Number of separate blasts to start [%s]" % (option_values['numProcs'])
+    parser_object.add_option( '-n', '--numProcs', type = 'int', default = default_values[ 'numProcs' ], \
+                              help = "Number of separate blasts to start [%s]" % \
+                                       ( default_values[ 'numProcs' ])
                             )
 
     parser_object.add_option( '-t', '--temp', default = './temp', help = ( "Name for the "
@@ -93,8 +108,7 @@ def add_options( parser_object ):
                                                                            "directory. Will be created "
                                                                            " at the beginning of the "
                                                                            "script and deleted at the "
-                                                                           "beginning of the script "
-                                                                           "and then removed at the end."
+                                                                           "at the end."
                                                                            "[/.temp]"
                                                                           )
                              )
@@ -132,40 +146,43 @@ def add_options( parser_object ):
                                      )
                             )
 
-    parser_object.add_option( '--evalue', default = '10', \
-                              help = "Maximum evalue for hit to be recorded [10]"
+    parser_object.add_option( '--evalue', default = default_values[ 'evalue' ], \
+                              help = "Maximum evalue for hit to be recorded [%s]"
+                                     % ( default_values[ 'evalue' ] )
                             )
 
-    parser_object.add_option( '-o', '--outFmt', type = 'int', default = 5, \
+    parser_object.add_option( '-o', '--outFmt', type = 'int', default = default_values[ 'outFmt' ], \
                               help = ( "Integer specifying the number of blast hits "
-                                       " to report per query. [5]"
+                                       "to report per query/subject pair. [%s]" % \
+                                         ( default_values[ 'outFmt' ] )
                                      )  
                             ) 
 
-    parser_object.add_option( '--numHits', type = 'int', default = 5, \
+    parser_object.add_option( '--numHits', type = 'int', default = default_values[ 'numHits' ], \
                               help = ( "Integer specifying the number of blast "
-                                       "hits to report per query. [5] "
+                                       "hits to report per query. [%s] " % ( default_values[ 'numHits' ] )
                                      )
                             )
 
-    parser_object.add_option( '--numHsps', type = 'int', default = 1, \
+    parser_object.add_option( '--numHsps', type = 'int', default = default_values[ 'numHsps' ], \
                               help = ( "Integer specifying the number of "
                                        "alignments to report per query/subject "
-                                       "pair. [1]"
+                                       "pair. [%s]" % ( default_values[ 'numHsps' ] )
                                      )
                             )
 
     # Determine what maxes it to next blast stage
-    parser_object.add_option( '--goodHit', default = '0.05', \
+    parser_object.add_option( '--goodHit', default = default_values[ 'goodHit' ], \
                               help = ( "Floating point number specifying "
                                        " the evalue necessary for "
-                                       " a hit to be significant. [0.05]"
+                                       " a hit to be significant. [%s]" % ( default_values[ 'goodHit' ] )
                                      )
                             )
 
-    parser_object.add_option( '--orfSize', type = 'int', default = 100, \
+    parser_object.add_option( '--orfSize', type = 'int', default = default_values[ 'orfSize' ], \
                               help = ( "Integer specifying the minimum size for an "
                                        "open reading frame to be considered significant "
+                                       "[%s]" % ( default_values[ 'orfSize' ] ) 
                                      )
                             )
 
