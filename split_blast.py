@@ -61,8 +61,20 @@ def main():
         options.keepOut = True
         options.dontParse = True
 
-    if multiple_queries():
+    if multiple_queries( options.query ):
         options.query = combine_queries( options.query )
+
+    set_path_to_absolute( options.query )
+    set_path_to_absolute( options.ns )
+    set_path_to_absolute( options.ps )
+
+
+def set_path_to_absolute( relative_path ):
+    ''' Sets the paths for for objects to the absolute path
+        within the fileSystem
+    '''
+    if relative_path:
+       relative_path = os.path.abspath( relative_path ) 
 
 def multiple_queries( query_list ):
     return len( query_list.split( ',' ) ) > 1 
