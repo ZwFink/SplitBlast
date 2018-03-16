@@ -61,6 +61,11 @@ def main():
         options.keepOut = True
         options.dontParse = True
 
+    if multiple_queries():
+        options.query = combine_queries( options.query )
+
+def multiple_queries( query_list ):
+    return len( query_list.split( ',' ) ) > 1 
 
 def add_options( parser_object , default_values ):
     ''' Method to add options to the command-line parser
