@@ -116,6 +116,9 @@ def multiple_queries( query_list ):
     return ( len( query_list.split( ',' ) ) > 1 )
 
 def combine_queries( queries, new_name = 'combo_query_%d.fasta' % random.randrange( 9999 ) ):
+    ''' Combine multiple input queries into one output file query
+        Returns file handle to the output file where the queries were written
+    '''
     file_out = open( new_name, 'w' )
     for current_query in queries.split( ',' ):
         file_in = open( current_query, 'r' )
@@ -124,6 +127,7 @@ def combine_queries( queries, new_name = 'combo_query_%d.fasta' % random.randran
         file_in.close()
     file_out.close()
     return new_name
+
     
 def add_options( parser_object , default_values ):
     ''' Method to add options to the command-line parser
