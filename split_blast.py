@@ -142,11 +142,20 @@ def split_blast( blast_type, task, options ):
         # Check to see if subject fasta is formatted as a blast database.
         # If not, format it.
         if blast_type in [ 'blastn', 'tblastx', 'tblastn' ]:
-            format_as_database( options, 'prot' )
-        elif blast_type in [ 'blastx', 'blastp' ]:
             format_as_database( options, 'nucl' )
+            subject = options.ns
+        elif blast_type in [ 'blastx', 'blastp' ]:
+            format_as_database( options, 'prot' )
+            subject = options.ps
+
+    # Run and parse blasts
+    
 
 def format_as_database( options, db_type ):
+    ''' Helper for split_blast, formats database as a 
+        protein or nucleotide database depending on boolean 
+        options index
+    '''
     if db_type == 'prot':
         extension = 'nsq'
     else:
