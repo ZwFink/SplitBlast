@@ -200,6 +200,18 @@ def split_fasta( options ):
      file_out.close()
     
         
+def read_files_list( files_to_read ):
+    ''' Reads a list of files, returns a 
+        list object containing the lines of every file
+    '''
+    list = []
+    for current_file in files_to_read:
+        file_in = open( current_file, 'r' )
+        for line in file_in:
+            list.append( line.strip() )
+    return list
+            
+    
     
     
 def add_options( parser_object , default_values ):
