@@ -128,6 +128,36 @@ def combine_queries( queries, new_name = 'combo_query_%d.fasta' % random.randran
     file_out.close()
     return new_name
 
+def split_blast( blast_type, task, options ):
+    print( blast_type, task )
+
+    # Create working directory and move to that directory
+    if not os.path.exists( options.temp ):
+        os.mkdir( options.temp )
+    os.chdir( options.temp )
+
+    sub_files = split_fasta( options )
+
+    if sub_files:
+        # Check to see if subject fasta is formatted as a blast database.
+        # If not, format it.
+        if blast_type in [ 'blastn', 'tblastx', 'tblastn' ]:
+            format_as_database( options, 'prot' )
+        elif blast_type in [ 'blastx', 'blastp' ]:
+            format_as_database( options, 'nucl' )
+
+def format_as_database( options, db_type ):
+    if db_type == 'prot':
+        extension = 'nsq'
+    else:
+        extension = 'psq'
+
+    if not options.dontIndex:
+        if not os.path.isfile( '%s.%s' % opts.ns, extension ):
+            cmd = "makeblastdb -in %s -dbtype %s" % ( opts.ns, db_type )
+            format_db = Popen( cmd, shell = True, stdout = PIPE, stderr = PIPE )
+            format_db.wait()
+    
     
 def add_options( parser_object , default_values ):
     ''' Method to add options to the command-line parser
