@@ -210,8 +210,24 @@ def read_files_list( files_to_read ):
         for line in file_in:
             list.append( line.strip() )
     return list
-            
-    
+
+def read_fasta_lists( file ):
+    ''' Extracts data from a fasta sequence file. Returns two lists, the first holds the
+        names of the sequences ( excluding '>' ), and the second holds the sequences 
+    '''
+
+    file_in = open( file, 'r' )
+    count = 0
+
+    names = []
+    sequences = []
+    current_sequence = ''
+
+    for line in file_in:
+        line = line.strip()
+        if line and line[ 0 ] == '>':
+            count += 1
+            names.append( line[ 1: ] )
     
     
 def add_options( parser_object , default_values ):
