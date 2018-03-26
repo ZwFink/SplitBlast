@@ -1,5 +1,6 @@
 
-import sys, optparse, os, math, random
+import sys, optparse, os, math, random 
+from subprocess import Popen, PIPE
 from Bio.Blast import NCBIXML
 
 
@@ -83,7 +84,6 @@ def main():
             for blastn_task in options.task.split( ',' ):
                 split_blast( blast_type, blastn_task, options )
         else:
-            # TODO look to see if python has optional arguments
             split_blast( blast_type, '', opts )
 
 def set_default_blast( options, nucleotide_sequences, protein_sequences ):
@@ -97,7 +97,7 @@ def set_default_blast( options, nucleotide_sequences, protein_sequences ):
     elif protein_sequences:
         options.blastType = 'blastx'
     else:
-        print( "Error, one subject fast must be provided!" )
+        print( "Error, one subject fasta must be provided!" )
         
 
 def set_path_to_absolute( relative_path ):
@@ -162,8 +162,8 @@ def format_as_database( options, db_type ):
         extension = 'psq'
 
     if not options.dontIndex:
-        if not os.path.isfile( '%s.%s' % opts.ns, extension ):
-            cmd = "makeblastdb -in %s -dbtype %s" % ( opts.ns, db_type )
+        if not os.path.isfile( '%s.%s' % ( options.ns, extension ) ):
+            cmd = "makeblastdb -in %s -dbtype %s" % ( options.ns, db_type )
             format_db = Popen( cmd, shell = True, stdout = PIPE, stderr = PIPE )
             format_db.wait()
 
@@ -191,7 +191,7 @@ def split_fasta( options ):
          write_fasta( sub_names, sub_seqs, new_filename )
      return created_files
 
- def write_fasta( names, sequences, new_filename):
+def write_fasta( names, sequences, new_filename):
      ''' Writes a given number of names and sequences into a fasta
          file'''
      file_out = open ( new_filename, 'w' )
@@ -228,7 +228,37 @@ def read_fasta_lists( file ):
         if line and line[ 0 ] == '>':
             count += 1
             names.append( line[ 1: ] )
+            if count > 1:
+                sequences.append( seq )
+            seq = ''
+
+        else:
+            current_sequence += line
+    sequences.append( current_sequence )
+
+    return names, sequences
     
+def subset_fasta( no_good_hits, blast_type, task, options):
+
+    names, sequences = read_fasta_lists( options.query )
+    simple_names = [ name.split( '\t' )[0] for name in names ]
+
+    sub_names = []
+    sub_sequences = []
+
+    for index in range( len( sequences ) ):
+        if simple_names[ index ] in no_good_hits:
+            sub_names.append( names[ index ] )
+            sub_sequences.append( sequences[ index ] )
+
+    print( blast_type )
+    print( task )
+
+    new_query_name = '%s/%s_%s_no_good_hits.fasta' % (
+                     options.startDir, blast_type, task )
+    write_fasta( sub_names, sub_sequences, new_query_name )
+
+    return new_query_name
     
 def add_options( parser_object , default_values ):
     ''' Method to add options to the command-line parser
