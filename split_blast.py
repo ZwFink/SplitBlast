@@ -166,6 +166,40 @@ def format_as_database( options, db_type ):
             cmd = "makeblastdb -in %s -dbtype %s" % ( opts.ns, db_type )
             format_db = Popen( cmd, shell = True, stdout = PIPE, stderr = PIPE )
             format_db.wait()
+
+def split_fasta( options ):
+     created_files = []
+     names, sequences = read_fasta_lists( options.query )
+     sequence_count = len( names )
+
+     if sequence_count >= options.numProcs:
+         sub_size = int( math.ceil( sequence_count / options.numProcs ) ) 
+     elif sequence_count > 0:
+         options.numProcs = sequence_count
+         sub_size = 1
+     else:
+         return created_files
+
+     for start in range( 0, sequence_count, sub_size ):
+         end = start + sub_size 
+
+         sub_names = names[ start : end ]
+         sub_seqs = sequences[ start: end ]
+
+         new_filename = '%d_%d.fasta' % ( start + 1, end )
+         created_files.append( new_filename )
+         write_fasta( sub_names, sub_seqs, new_filename )
+     return created_files
+
+ def write_fasta( names, sequences, new_filename):
+     ''' Writes a given number of names and sequences into a fasta
+         file'''
+     file_out = open ( new_filename, 'w' )
+     for index in range( len( names ) ):
+         file_out.write( ">%s\n%s\n" % ( names[ index ], sequences[ index ] ) )
+     file_out.close()
+    
+        
     
     
 def add_options( parser_object , default_values ):
