@@ -1,4 +1,3 @@
-
 import sys, optparse, os, math, random 
 from subprocess import Popen, PIPE
 from Bio.Blast import NCBIXML
@@ -66,9 +65,9 @@ def main():
         options.query = combine_queries( options.query )
 
     # Change filenames to their absolute path versions      
-    set_path_to_absolute( options.query )
-    set_path_to_absolute( options.ns )
-    set_path_to_absolute( options.ps )
+    options.query = set_path_to_absolute( options.query )
+    options.ns = set_path_to_absolute( options.ns )
+    options.ps = set_path_to_absolute( options.ps )
 
     # Save current working directory
     options.startDir = os.getcwd()
@@ -84,7 +83,7 @@ def main():
             for blastn_task in options.task.split( ',' ):
                 split_blast( blast_type, blastn_task, options )
         else:
-            split_blast( blast_type, '', opts )
+            split_blast( blast_type, '', options )
 
 def set_default_blast( options, nucleotide_sequences, protein_sequences ):
     ''' Sets default blast type, based on which combination of 
@@ -105,7 +104,7 @@ def set_path_to_absolute( relative_path ):
         within the fileSystem
     '''
     if relative_path:
-       relative_path = os.path.abspath( relative_path ) 
+       return os.path.abspath( relative_path ) 
 
 def multiple_queries( query_list ):
     '''
@@ -134,8 +133,8 @@ def split_blast( blast_type, task, options ):
     # Create working directory and move to that directory
     if not os.path.exists( options.temp ):
         os.mkdir( options.temp )
-    os.chdir( options.temp )
 
+    os.chdir( options.temp )
     sub_files = split_fasta( options )
 
     if sub_files:
