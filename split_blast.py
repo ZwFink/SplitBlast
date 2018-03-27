@@ -13,32 +13,37 @@ class BlastInfo:
     '''
     def __init__( self, options, this_out, in_file, cmd ):
         # prefix to be prepended to parsed file names   
-        self._file_prefix = '.'.join( in_file.split('.')[ :-1 ] )
+        prefix = '.'.join( in_file.split('.')[ :-1 ] )
 
         # reg output for program output
-        self._reg_out = '%s_parsed.txt' % ( file_prefix )
-        # TODO determine if this is number_hits?
-        self._no_hits
+        self._reg_out = '%s_parsed.txt' % ( prefix )
+
+        self._options = options
+
+        self._this_out = this_out
+
+        self._no_hits = '%s_nohits.txt' % ( prefix ) 
 
         # Command to be used for blasting
         self._blast_cmd = cmd
 
-        set_parse_command()
+        self.set_parse_command()
+        print( options )
         if options.withColor:
-            set_color()
+            self.set_color()
             self._parse_cmd += "--color_out %s " % ( self.color_out )
         
         
-    def set_color():
+    def set_color( self ):
         ''' Method to set the color of program output
         '''
-        self.color_out = '%s_parsed_colored.txt' % ( self._file_prefix )
+        self.color_out = '%s_parsed_colored.txt' % ( prefix )
 
-    def set_parse_command():
+    def set_parse_command( self ):
         self._parse_cmd = ( "%s --reg_out %s --no_hits %s " 
                           "--numHits%d --numHsps %d --goodHit %s --xml %s"
-                            % ( parse_file, self._reg_out, self._no_hits, options.numHits, \
-                                options.numHsps, options.goodHit, this_out )
+                            % ( self.parse_file, self._reg_out, self._no_hits, self._options.numHits, \
+                                self._options.numHsps, self._options.goodHit, self._this_out )
                                 
                           )
 
@@ -118,6 +123,7 @@ def combine_queries( queries, new_name = 'combo_query_%d.fasta' % random.randran
     ''' Combine multiple input queries into one output file query
         Returns file handle to the output file where the queries were written
     '''
+   
     file_out = open( new_name, 'w' )
     for current_query in queries.split( ',' ):
         file_in = open( current_query, 'r' )
@@ -129,6 +135,13 @@ def combine_queries( queries, new_name = 'combo_query_%d.fasta' % random.randran
 
 def split_blast( blast_type, task, options ):
     print( blast_type, task )
+
+    # Lists to hold references to output files created by method
+    regular_files = []
+    color_files = []
+    nohit_files = []
+    blast_result_files = []
+
 
     # Create working directory and move to that directory
     if not os.path.exists( options.temp ):
@@ -147,9 +160,54 @@ def split_blast( blast_type, task, options ):
             format_as_database( options, 'prot' )
             subject = options.ps
 
-    # Run and parse blasts
-    
+        # Run and parse blasts
+        for file in sub_files:
+            # Only blastn uses 'task' variable
+            if blast_type == 'blastn':
+                this_out = '%s_%s_%s_%s' % \
+                           (
+                              file, blast_type, task[ :2 ], subject.split( '/' )[ -1 ]
+                           )
+                command = '%s -query %s -db %s -evalue %s -out %s -outfmt %d -task %s' % \
+                          ( blast_type, file, subject, options.evalue, this_out, options.outFmt, \
+                            task )
+                blast_result_files.append( this_out )
+            else:
+                this_out = '%s_%s_%s' % \
+                           (
+                               file, blast_type, subject.split( '/' )[ -1 ]
+                           )
+                command = '%s -query %s -db %s -evalue %s -out %s -outfmt %d' % \
+                          ( blast_type, file, subject, options.evalue, this_out, options.outFmt )
 
+
+            work_info = BlastInfo( options, this_out, file, command )
+            request_work( work_info )
+            reg_files.append( work_info.reg_out )
+
+            if options.withColor:
+                color_files.append( work_info.color_out )
+            nohit_files.append( work_info.no_hits )
+        # make and start thread pool opts.numProcs
+        # stop and free thread pool
+
+        no_good_hits = combine_outputs( blast_type, task, subject, reg_files, color_files, \
+                                        nohit_files, options )
+
+        if not options.blastFull:
+            # Make new query for the next round of blasting. Opts.query references new file
+            options.query = subset_fasta( no_good_hits, blast_type, task, options )
+
+        if not options.keepOut:
+            for file in blast_result_files + sub_files + nohit_files:
+                if os.path.isfile( file ):
+                    os.remove( file )
+
+    os.chdir( options.startDir )
+    if not options.keepOut:
+        os.rmdir( options.temp )
+                
+                
 def format_as_database( options, db_type ):
     ''' Helper for split_blast, formats database as a 
         protein or nucleotide database depending on boolean 
@@ -287,7 +345,7 @@ def add_options( parser_object , default_values ):
                                                                )
                             )
 
-    parser_object.add_option( '--wc', '--withColor', default = False, \
+    parser_object.add_option( '--withColor', default = False, \
                               action = "store_true", help = ( "Use this flag if you want "
                                                               "the colored version of the "
                                                               "parsed output to be produced."
