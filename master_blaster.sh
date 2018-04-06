@@ -61,9 +61,6 @@ case $key in
 
     -t|--temp)
     TEMP="$2"
-    if [ "$TEMP" = "" ]; then
-        TEMP=$DEFAULT_TEMP
-    fi
     shift
     shift
     ;;
@@ -152,6 +149,9 @@ done
 set -- "${POSITIONAL[@]}" # restore positional parameters
 if [ "$OUTFMT" = "" ]; then
     OUTFMT=5
+fi
+if [ -z "$TEMP" ]; then
+    TEMP=$DEFAULT_TEMP
 fi
 
 # Read all of the command-line arguments into a variable
