@@ -190,10 +190,12 @@ def split_blast( blast_type, task, options ):
         nohit_files.append( work_info.no_hits )
 
         # Run the blast
-        subprocess.call( command, shell=True ) 
+        blast = subprocess.Popen( command, shell=True ) 
+	blast.wait()
         # Run the parse command 
         os.chdir( "../" )
-        subprocess.call( work_info.parse_cmd, shell=True )
+        blast = subprocess.Popen( work_info.parse_cmd, shell=True )
+	blast.wait()
 
         no_good_hits = combine_outputs( blast_type, task, subject, regular_files, color_files, \
                                         nohit_files, options )
