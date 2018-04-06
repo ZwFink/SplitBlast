@@ -1,4 +1,5 @@
 import sys, optparse, os, math, random 
+import subprocess
 from subprocess import Popen, PIPE
 from Bio.Blast import NCBIXML
 
@@ -16,19 +17,19 @@ class BlastInfo:
         prefix = '.'.join( in_file.split('.')[ :-1 ] )
 
         # reg output for program output
-        self._reg_out = '%s_parsed.txt' % ( prefix )
+        self.reg_out = '%s_parsed.txt' % ( prefix )
 
         self._options = options
 
         self._this_out = this_out
 
-        self._no_hits = '%s_nohits.txt' % ( prefix ) 
+        self.no_hits = '%s_nohits.txt' % ( prefix ) 
 
         # Command to be used for blasting
         self._blast_cmd = cmd
 
         self.set_parse_command()
-        print( options )
+        print( self.parse_cmd )
         if options.withColor:
             self.set_color()
             self._parse_cmd += "--color_out %s " % ( self.color_out )
@@ -40,9 +41,9 @@ class BlastInfo:
         self.color_out = '%s_parsed_colored.txt' % ( prefix )
 
     def set_parse_command( self ):
-        self._parse_cmd = ( "%s --reg_out %s --no_hits %s " 
-                          "--numHits%d --numHsps %d --goodHit %s --xml %s"
-                            % ( self.parse_file, self._reg_out, self._no_hits, self._options.numHits, \
+        self.parse_cmd = ( "python %s --reg_out %s --no_hits %s " 
+                          "--numHits %d --numHsps %d --goodHit %s --xml %s"
+                            % ( self.parse_file, self.reg_out, self.no_hits, self._options.numHits, \
                                 self._options.numHsps, self._options.goodHit, self._this_out )
                                 
                           )
@@ -61,16 +62,18 @@ def main():
     add_options( option_parser, option_defaults )
     options, arguments = option_parser.parse_args() 
 
+
     # Adjust defaults if output type is not xml
     if options.outFmt != 5:
         options.keepOut = True
         options.dontParse = True
 
-    if multiple_queries( options.query ):
-        options.query = combine_queries( options.query )
+    # if multiple_queries( options.query ):
+        # options.query = combine_queries( options.query )
 
     # Change filenames to their absolute path versions      
     options.query = set_path_to_absolute( options.query )
+    options.temp = set_path_to_absolute( options.temp )
     options.ns = set_path_to_absolute( options.ns )
     options.ps = set_path_to_absolute( options.ps )
 
@@ -80,6 +83,7 @@ def main():
     # Set default blast type if none provided
     if not options.blastType:
         set_default_blast( options, options.ns, options.ps )
+        print( "Default blast: " + options.blastType )
 
     
     # Step through each type of blast
@@ -123,7 +127,6 @@ def combine_queries( queries, new_name = 'combo_query_%d.fasta' % random.randran
     ''' Combine multiple input queries into one output file query
         Returns file handle to the output file where the queries were written
     '''
-   
     file_out = open( new_name, 'w' )
     for current_query in queries.split( ',' ):
         file_in = open( current_query, 'r' )
@@ -143,16 +146,14 @@ def split_blast( blast_type, task, options ):
     blast_result_files = []
 
 
-    # Create working directory and move to that directory
-    if not os.path.exists( options.temp ):
-        os.mkdir( options.temp )
-
     os.chdir( options.temp )
-    sub_files = split_fasta( options )
+    # Remove the temp/ from our query file's path
+    sub_file = options.query
 
-    if sub_files:
+    if sub_file:
         # Check to see if subject fasta is formatted as a blast database.
         # If not, format it.
+        
         if blast_type in [ 'blastn', 'tblastx', 'tblastn' ]:
             format_as_database( options, 'nucl' )
             subject = options.ns
@@ -160,53 +161,48 @@ def split_blast( blast_type, task, options ):
             format_as_database( options, 'prot' )
             subject = options.ps
 
-        # Run and parse blasts
-        for file in sub_files:
-            # Only blastn uses 'task' variable
-            if blast_type == 'blastn':
-                this_out = '%s_%s_%s_%s' % \
-                           (
-                              file, blast_type, task[ :2 ], subject.split( '/' )[ -1 ]
-                           )
-                command = '%s -query %s -db %s -evalue %s -out %s -outfmt %d -task %s' % \
-                          ( blast_type, file, subject, options.evalue, this_out, options.outFmt, \
-                            task )
-                blast_result_files.append( this_out )
-            else:
-                this_out = '%s_%s_%s' % \
-                           (
-                               file, blast_type, subject.split( '/' )[ -1 ]
-                           )
-                command = '%s -query %s -db %s -evalue %s -out %s -outfmt %d' % \
-                          ( blast_type, file, subject, options.evalue, this_out, options.outFmt )
+        # Run and parse blast
+        # Only blastn uses 'task' variable
+        if blast_type == 'blastn':
+            this_out = '%s_%s_%s_%s' % \
+                       (
+                          sub_file, blast_type, task[ :2 ], subject.split( '/' )[ -1 ]
+                       )
+            command = '%s -query %s -db %s -evalue %s -out %s -outfmt %d -task %s' % \
+                      ( blast_type, sub_file, subject, options.evalue, this_out, options.outFmt, \
+                        task )
+            blast_result_files.append( this_out )
+        else:
+            this_out = '%s_%s_%s' % \
+                       (
+                           sub_file, blast_type, subject.split( '/' )[ -1 ]
+                       )
+            command = '%s -query %s -db %s -evalue %s -out %s -outfmt %d' % \
+                      ( blast_type, sub_file, subject, options.evalue, this_out, options.outFmt )
 
 
-            work_info = BlastInfo( options, this_out, file, command )
-            request_work( work_info )
-            reg_files.append( work_info.reg_out )
+        work_info = BlastInfo( options, this_out, sub_file, command )
 
-            if options.withColor:
-                color_files.append( work_info.color_out )
-            nohit_files.append( work_info.no_hits )
-        # make and start thread pool opts.numProcs
-        # stop and free thread pool
+        regular_files.append( work_info.reg_out )
 
-        no_good_hits = combine_outputs( blast_type, task, subject, reg_files, color_files, \
+        if options.withColor:
+            color_files.append( work_info.color_out )
+        nohit_files.append( work_info.no_hits )
+
+        # Run the blast
+        subprocess.call( command, shell=True ) 
+        # Run the parse command 
+        os.chdir( "../" )
+        subprocess.call( work_info.parse_cmd, shell=True )
+
+        no_good_hits = combine_outputs( blast_type, task, subject, regular_files, color_files, \
                                         nohit_files, options )
+
 
         if not options.blastFull:
             # Make new query for the next round of blasting. Opts.query references new file
             options.query = subset_fasta( no_good_hits, blast_type, task, options )
-
-        if not options.keepOut:
-            for file in blast_result_files + sub_files + nohit_files:
-                if os.path.isfile( file ):
-                    os.remove( file )
-
-    os.chdir( options.startDir )
-    if not options.keepOut:
-        os.rmdir( options.temp )
-                
+               
                 
 def format_as_database( options, db_type ):
     ''' Helper for split_blast, formats database as a 
@@ -219,10 +215,11 @@ def format_as_database( options, db_type ):
         extension = 'psq'
 
     if not options.dontIndex:
+        os.chdir( "../" )
         if not os.path.isfile( '%s.%s' % ( options.ns, extension ) ):
             cmd = "makeblastdb -in %s -dbtype %s" % ( options.ns, db_type )
-            format_db = Popen( cmd, shell = True, stdout = PIPE, stderr = PIPE )
-            format_db.wait()
+            subprocess.call( cmd, shell = True )
+        os.chdir( options.temp )
 
 def split_fasta( options ):
      created_files = []
@@ -316,7 +313,36 @@ def subset_fasta( no_good_hits, blast_type, task, options):
     write_fasta( sub_names, sub_sequences, new_query_name )
 
     return new_query_name
+
+def get_file_names( search_directory ):
+            return os.listdir( search_directory )
+
+def combine_outputs(blast_type, task, subject, reg_files, color_files, nohit_files, opts):
+    #Will be for combining subset files
+    #Normal parsed output file
+    out_parse = open('%s_%s_%s_%s_parsed.txt' % (opts.query, blast_type, task[:2], subject.split('/')[-1]), 'w+')    
+   # out_parse.write("Query Name\tQuery Length\tSubject Name\tSubject Length\tAlignment Length\tQuery Start\tQuery End\tSubject Start\tSubject End\tHsp Score\tHsp Expect\tHsp Identities\tPercent Match\tNumber_of_gaps\n")
+    for f in reg_files:
+        fin=open(f, 'r')
+        for line in fin:
+            out_parse.write(line)
+        fin.close()
+        os.remove(f)
     
+    if color_files:
+        #Colored parsed output file (at least on linux terminal - use the 'more' command)
+        col_out_parse = open('%s_%s_%s_%s_parsed_colored.txt' % (opts.query, blast_type, task[:2], subject.split('/')[-1]), 'w')    
+        col_out_parse.write("Query Name\t\033[91mQuery Length\033[0m\tSubject Name\tSubject Length\t\033[95mAlignment Length\033[0m\tQuery Start\tQuery End\tSubject Start\tSubject End\tHsp Score\t\033[96mHsp Expect\033[0m\tHsp Identities\t\033[92mPercent Match\033[0m\tNumber_of_gaps\n")
+        for f in color_files:
+            fin=open(f, 'r')
+            for line in fin:
+                col_out_parse.write(line)
+            fin.close()
+            os.remove(f)
+
+    return read_files_list(nohit_files)
+
+
 def add_options( parser_object , default_values ):
     ''' Method to add options to the command-line parser
         Defaults stored in default_values dictionary
@@ -440,6 +466,7 @@ def add_options( parser_object , default_values ):
                                        "[%s]" % ( default_values[ 'orfSize' ] ) 
                                      )
                             )
+    parser_object.add_option( '--cleanUp', default = "" )
 
 if __name__ == '__main__':
     main()
